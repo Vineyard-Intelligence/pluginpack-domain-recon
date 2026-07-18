@@ -1,0 +1,82 @@
+{
+  "identifier": "run.vineyard.pluginpacks.domain_recon",
+  "content_type": "vineyard:pluginpack",
+  "name": "Domain Recon",
+  "version": "1.0.0",
+  "description": "Passive, keyless domain enrichment: DNS records over DoH, RDAP registration data, and Certificate Transparency subdomain discovery. Runs entirely in the browser — no API keys, no server.",
+  "author": {
+    "name": "vineyard-run",
+    "url": "https://github.com/vineyard-run"
+  },
+  "license": "Apache-2.0",
+  "icon": "globe",
+  "platforms": {
+    "primary": "web",
+    "web": {
+      "runtime": "sandbox-js",
+      "entry": "inline"
+    }
+  },
+  "plugins": [
+    {
+      "identifier": "run.vineyard.plugins.dns_lookup",
+      "content_type": "vineyard:plugin",
+      "name": "DNS Lookup",
+      "version": "1.0.0",
+      "description": "Resolves each selected Domain over DNS-over-HTTPS and maps its records: A/AAAA become IP Address nodes, while MX/NS/TXT/CAA become DNS Record nodes. Keyless, no server.",
+      "icon": "route",
+      "platforms": { "primary": "web", "web": { "runtime": "sandbox-js", "entry": "inline" } },
+      "io": {
+        "consumes": [{ "typepack": "run.vineyard.typepacks.infrastructure", "category": "infrastructure", "name": "domain" }],
+        "produces": [
+          { "typepack": "run.vineyard.typepacks.infrastructure", "category": "infrastructure", "name": "ip_address" },
+          { "typepack": "run.vineyard.typepacks.infrastructure", "category": "infrastructure", "name": "dns_record" }
+        ]
+      },
+      "scopes": {
+        "graph": ["node:read", "node:create", "edge:create"],
+        "network": [
+          { "endpoint": "https://cloudflare-dns.com/dns-query", "methods": ["GET"], "purpose": "Resolve DNS records over DoH." },
+          { "endpoint": "https://dns.google/resolve", "methods": ["GET"], "purpose": "Fallback DoH resolver." }
+        ]
+      },
+      "lifecycle": { "persistence": "opt-in", "controls": ["progress", "cancel"], "progress": "determinate" }
+    },
+    {
+      "identifier": "run.vineyard.plugins.rdap_domain",
+      "content_type": "vineyard:plugin",
+      "name": "RDAP Domain",
+      "version": "1.0.0",
+      "description": "Fills each selected Domain's registrar, creation/expiry dates, status and nameservers from RDAP (the structured WHOIS successor), via rdap.org bootstrap. Keyless, CORS-native, no server.",
+      "icon": "scroll-text",
+      "platforms": { "primary": "web", "web": { "runtime": "sandbox-js", "entry": "inline" } },
+      "io": {
+        "consumes": [{ "typepack": "run.vineyard.typepacks.infrastructure", "category": "infrastructure", "name": "domain" }],
+        "produces": []
+      },
+      "scopes": {
+        "graph": ["node:read", "node:update"],
+        "network": [{ "endpoint": "https://rdap.org/", "methods": ["GET"], "purpose": "RDAP bootstrap → authoritative registry (both send CORS *)." }]
+      },
+      "lifecycle": { "persistence": "opt-in", "controls": ["progress", "cancel"], "progress": "determinate" }
+    },
+    {
+      "identifier": "run.vineyard.plugins.crtsh_subdomains",
+      "content_type": "vineyard:plugin",
+      "name": "Certificate Transparency Subdomains",
+      "version": "1.0.0",
+      "description": "Discovers subdomains of each selected Domain from public Certificate Transparency logs (crt.sh) and adds them as Domain nodes. Passive, keyless, no server. Capped at 150 per domain.",
+      "icon": "badge-check",
+      "platforms": { "primary": "web", "web": { "runtime": "sandbox-js", "entry": "inline" } },
+      "io": {
+        "consumes": [{ "typepack": "run.vineyard.typepacks.infrastructure", "category": "infrastructure", "name": "domain" }],
+        "produces": [{ "typepack": "run.vineyard.typepacks.infrastructure", "category": "infrastructure", "name": "domain" }]
+      },
+      "scopes": {
+        "graph": ["node:read", "node:create", "edge:create"],
+        "network": [{ "endpoint": "https://crt.sh/", "methods": ["GET"], "purpose": "Query Certificate Transparency logs for subdomains." }]
+      },
+      "lifecycle": { "persistence": "opt-in", "controls": ["progress", "cancel"], "progress": "determinate" }
+    }
+  ]
+}
