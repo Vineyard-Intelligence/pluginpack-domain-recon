@@ -2,8 +2,8 @@
   "identifier": "run.vineyard.pluginpacks.domain_recon",
   "content_type": "vineyard:pluginpack",
   "name": "Domain Recon",
-  "version": "1.0.0",
-  "description": "Passive, keyless domain enrichment: DNS records over DoH, RDAP registration data, and Certificate Transparency subdomain discovery. Runs entirely in the browser — no API keys, no server.",
+  "version": "2.0.0",
+  "description": "Passive, keyless domain enrichment: per-record DNS lookups over DoH (A, AAAA, CNAME, MX, NS, TXT, CAA), RDAP registration data, and Certificate Transparency subdomain discovery.",
   "author": {
     "name": "vineyard-run",
     "url": "https://github.com/vineyard-run"
@@ -14,33 +14,443 @@
     "primary": "web",
     "web": {
       "runtime": "sandbox-js",
-      "entry": "inline"
+      "entry": "dist/pack.mjs"
     }
   },
   "plugins": [
     {
-      "identifier": "run.vineyard.plugins.dns_lookup",
+      "identifier": "run.vineyard.plugins.dns_lookup_a",
       "content_type": "vineyard:plugin",
-      "name": "DNS Lookup",
+      "name": "DNS Lookup (A Record)",
       "version": "1.0.0",
-      "description": "Resolves each selected Domain over DNS-over-HTTPS and maps its records: A/AAAA become IP Address nodes, while MX/NS/TXT/CAA become DNS Record nodes. Keyless, no server.",
-      "icon": "route",
-      "platforms": { "primary": "web", "web": { "runtime": "sandbox-js", "entry": "inline" } },
+      "description": "Resolves each selected Domain's A records over DNS-over-HTTPS and adds them to the graph. Keyless, no server.",
+      "icon": "network",
+      "platforms": {
+        "primary": "web",
+        "web": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs"
+        }
+      },
       "io": {
-        "consumes": [{ "typepack": "run.vineyard.typepacks.infrastructure", "category": "infrastructure", "name": "domain" }],
+        "consumes": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "infrastructure",
+            "name": "domain"
+          }
+        ],
         "produces": [
-          { "typepack": "run.vineyard.typepacks.infrastructure", "category": "infrastructure", "name": "ip_address" },
-          { "typepack": "run.vineyard.typepacks.infrastructure", "category": "infrastructure", "name": "dns_record" }
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "infrastructure",
+            "name": "ip_address"
+          }
         ]
       },
       "scopes": {
-        "graph": ["node:read", "node:create", "edge:create"],
+        "graph": [
+          "node:read",
+          "node:create",
+          "edge:create"
+        ],
         "network": [
-          { "endpoint": "https://cloudflare-dns.com/dns-query", "methods": ["GET"], "purpose": "Resolve DNS records over DoH." },
-          { "endpoint": "https://dns.google/resolve", "methods": ["GET"], "purpose": "Fallback DoH resolver." }
+          {
+            "endpoint": "https://cloudflare-dns.com/dns-query",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "Resolve DNS records over DoH."
+          },
+          {
+            "endpoint": "https://dns.google/resolve",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "Fallback DoH resolver."
+          }
         ]
       },
-      "lifecycle": { "persistence": "opt-in", "controls": ["progress", "cancel"], "progress": "determinate" }
+      "lifecycle": {
+        "persistence": "opt-in",
+        "controls": [
+          "progress",
+          "cancel"
+        ],
+        "progress": "determinate"
+      }
+    },
+    {
+      "identifier": "run.vineyard.plugins.dns_lookup_aaaa",
+      "content_type": "vineyard:plugin",
+      "name": "DNS Lookup (AAAA Record)",
+      "version": "1.0.0",
+      "description": "Resolves each selected Domain's AAAA records over DNS-over-HTTPS and adds them to the graph. Keyless, no server.",
+      "icon": "waypoints",
+      "platforms": {
+        "primary": "web",
+        "web": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs"
+        }
+      },
+      "io": {
+        "consumes": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "infrastructure",
+            "name": "domain"
+          }
+        ],
+        "produces": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "infrastructure",
+            "name": "ip_address"
+          }
+        ]
+      },
+      "scopes": {
+        "graph": [
+          "node:read",
+          "node:create",
+          "edge:create"
+        ],
+        "network": [
+          {
+            "endpoint": "https://cloudflare-dns.com/dns-query",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "Resolve DNS records over DoH."
+          },
+          {
+            "endpoint": "https://dns.google/resolve",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "Fallback DoH resolver."
+          }
+        ]
+      },
+      "lifecycle": {
+        "persistence": "opt-in",
+        "controls": [
+          "progress",
+          "cancel"
+        ],
+        "progress": "determinate"
+      }
+    },
+    {
+      "identifier": "run.vineyard.plugins.dns_lookup_cname",
+      "content_type": "vineyard:plugin",
+      "name": "DNS Lookup (CNAME Record)",
+      "version": "1.0.0",
+      "description": "Resolves each selected Domain's CNAME records over DNS-over-HTTPS and adds them to the graph. Keyless, no server.",
+      "icon": "link",
+      "platforms": {
+        "primary": "web",
+        "web": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs"
+        }
+      },
+      "io": {
+        "consumes": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "infrastructure",
+            "name": "domain"
+          }
+        ],
+        "produces": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "infrastructure",
+            "name": "dns_record"
+          }
+        ]
+      },
+      "scopes": {
+        "graph": [
+          "node:read",
+          "node:create",
+          "edge:create"
+        ],
+        "network": [
+          {
+            "endpoint": "https://cloudflare-dns.com/dns-query",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "Resolve DNS records over DoH."
+          },
+          {
+            "endpoint": "https://dns.google/resolve",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "Fallback DoH resolver."
+          }
+        ]
+      },
+      "lifecycle": {
+        "persistence": "opt-in",
+        "controls": [
+          "progress",
+          "cancel"
+        ],
+        "progress": "determinate"
+      }
+    },
+    {
+      "identifier": "run.vineyard.plugins.dns_lookup_mx",
+      "content_type": "vineyard:plugin",
+      "name": "DNS Lookup (MX Record)",
+      "version": "1.0.0",
+      "description": "Resolves each selected Domain's MX records over DNS-over-HTTPS and adds them to the graph. Keyless, no server.",
+      "icon": "server",
+      "platforms": {
+        "primary": "web",
+        "web": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs"
+        }
+      },
+      "io": {
+        "consumes": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "infrastructure",
+            "name": "domain"
+          }
+        ],
+        "produces": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "infrastructure",
+            "name": "dns_record"
+          }
+        ]
+      },
+      "scopes": {
+        "graph": [
+          "node:read",
+          "node:create",
+          "edge:create"
+        ],
+        "network": [
+          {
+            "endpoint": "https://cloudflare-dns.com/dns-query",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "Resolve DNS records over DoH."
+          },
+          {
+            "endpoint": "https://dns.google/resolve",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "Fallback DoH resolver."
+          }
+        ]
+      },
+      "lifecycle": {
+        "persistence": "opt-in",
+        "controls": [
+          "progress",
+          "cancel"
+        ],
+        "progress": "determinate"
+      }
+    },
+    {
+      "identifier": "run.vineyard.plugins.dns_lookup_ns",
+      "content_type": "vineyard:plugin",
+      "name": "DNS Lookup (NS Record)",
+      "version": "1.0.0",
+      "description": "Resolves each selected Domain's NS records over DNS-over-HTTPS and adds them to the graph. Keyless, no server.",
+      "icon": "server",
+      "platforms": {
+        "primary": "web",
+        "web": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs"
+        }
+      },
+      "io": {
+        "consumes": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "infrastructure",
+            "name": "domain"
+          }
+        ],
+        "produces": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "infrastructure",
+            "name": "dns_record"
+          }
+        ]
+      },
+      "scopes": {
+        "graph": [
+          "node:read",
+          "node:create",
+          "edge:create"
+        ],
+        "network": [
+          {
+            "endpoint": "https://cloudflare-dns.com/dns-query",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "Resolve DNS records over DoH."
+          },
+          {
+            "endpoint": "https://dns.google/resolve",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "Fallback DoH resolver."
+          }
+        ]
+      },
+      "lifecycle": {
+        "persistence": "opt-in",
+        "controls": [
+          "progress",
+          "cancel"
+        ],
+        "progress": "determinate"
+      }
+    },
+    {
+      "identifier": "run.vineyard.plugins.dns_lookup_txt",
+      "content_type": "vineyard:plugin",
+      "name": "DNS Lookup (TXT Record)",
+      "version": "1.0.0",
+      "description": "Resolves each selected Domain's TXT records over DNS-over-HTTPS and adds them to the graph. Keyless, no server.",
+      "icon": "globe",
+      "platforms": {
+        "primary": "web",
+        "web": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs"
+        }
+      },
+      "io": {
+        "consumes": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "infrastructure",
+            "name": "domain"
+          }
+        ],
+        "produces": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "infrastructure",
+            "name": "dns_record"
+          }
+        ]
+      },
+      "scopes": {
+        "graph": [
+          "node:read",
+          "node:create",
+          "edge:create"
+        ],
+        "network": [
+          {
+            "endpoint": "https://cloudflare-dns.com/dns-query",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "Resolve DNS records over DoH."
+          },
+          {
+            "endpoint": "https://dns.google/resolve",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "Fallback DoH resolver."
+          }
+        ]
+      },
+      "lifecycle": {
+        "persistence": "opt-in",
+        "controls": [
+          "progress",
+          "cancel"
+        ],
+        "progress": "determinate"
+      }
+    },
+    {
+      "identifier": "run.vineyard.plugins.dns_lookup_caa",
+      "content_type": "vineyard:plugin",
+      "name": "DNS Lookup (CAA Record)",
+      "version": "1.0.0",
+      "description": "Resolves each selected Domain's CAA records over DNS-over-HTTPS and adds them to the graph. Keyless, no server.",
+      "icon": "shield-alert",
+      "platforms": {
+        "primary": "web",
+        "web": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs"
+        }
+      },
+      "io": {
+        "consumes": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "infrastructure",
+            "name": "domain"
+          }
+        ],
+        "produces": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "infrastructure",
+            "name": "dns_record"
+          }
+        ]
+      },
+      "scopes": {
+        "graph": [
+          "node:read",
+          "node:create",
+          "edge:create"
+        ],
+        "network": [
+          {
+            "endpoint": "https://cloudflare-dns.com/dns-query",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "Resolve DNS records over DoH."
+          },
+          {
+            "endpoint": "https://dns.google/resolve",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "Fallback DoH resolver."
+          }
+        ]
+      },
+      "lifecycle": {
+        "persistence": "opt-in",
+        "controls": [
+          "progress",
+          "cancel"
+        ],
+        "progress": "determinate"
+      }
     },
     {
       "identifier": "run.vineyard.plugins.rdap_domain",
@@ -49,16 +459,46 @@
       "version": "1.0.0",
       "description": "Fills each selected Domain's registrar, creation/expiry dates, status and nameservers from RDAP (the structured WHOIS successor), via rdap.org bootstrap. Keyless, CORS-native, no server.",
       "icon": "scroll-text",
-      "platforms": { "primary": "web", "web": { "runtime": "sandbox-js", "entry": "inline" } },
+      "platforms": {
+        "primary": "web",
+        "web": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs"
+        }
+      },
       "io": {
-        "consumes": [{ "typepack": "run.vineyard.typepacks.infrastructure", "category": "infrastructure", "name": "domain" }],
+        "consumes": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "infrastructure",
+            "name": "domain"
+          }
+        ],
         "produces": []
       },
       "scopes": {
-        "graph": ["node:read", "node:update"],
-        "network": [{ "endpoint": "https://rdap.org/", "methods": ["GET"], "purpose": "RDAP bootstrap → authoritative registry (both send CORS *)." }]
+        "graph": [
+          "node:read",
+          "node:update"
+        ],
+        "network": [
+          {
+            "endpoint": "https://rdap.org/",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "RDAP bootstrap \u2192 authoritative registry (both send CORS *)."
+          }
+        ]
       },
-      "lifecycle": { "persistence": "opt-in", "controls": ["progress", "cancel"], "progress": "determinate" }
+      "lifecycle": {
+        "persistence": "opt-in",
+        "controls": [
+          "progress",
+          "cancel"
+        ],
+        "progress": "determinate"
+      }
     },
     {
       "identifier": "run.vineyard.plugins.crtsh_subdomains",
@@ -67,16 +507,53 @@
       "version": "1.0.0",
       "description": "Discovers subdomains of each selected Domain from public Certificate Transparency logs (crt.sh) and adds them as Domain nodes. Passive, keyless, no server. Capped at 150 per domain.",
       "icon": "badge-check",
-      "platforms": { "primary": "web", "web": { "runtime": "sandbox-js", "entry": "inline" } },
+      "platforms": {
+        "primary": "web",
+        "web": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs"
+        }
+      },
       "io": {
-        "consumes": [{ "typepack": "run.vineyard.typepacks.infrastructure", "category": "infrastructure", "name": "domain" }],
-        "produces": [{ "typepack": "run.vineyard.typepacks.infrastructure", "category": "infrastructure", "name": "domain" }]
+        "consumes": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "infrastructure",
+            "name": "domain"
+          }
+        ],
+        "produces": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "infrastructure",
+            "name": "domain"
+          }
+        ]
       },
       "scopes": {
-        "graph": ["node:read", "node:create", "edge:create"],
-        "network": [{ "endpoint": "https://crt.sh/", "methods": ["GET"], "purpose": "Query Certificate Transparency logs for subdomains." }]
+        "graph": [
+          "node:read",
+          "node:create",
+          "edge:create"
+        ],
+        "network": [
+          {
+            "endpoint": "https://crt.sh/",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "Query Certificate Transparency logs for subdomains."
+          }
+        ]
       },
-      "lifecycle": { "persistence": "opt-in", "controls": ["progress", "cancel"], "progress": "determinate" }
+      "lifecycle": {
+        "persistence": "opt-in",
+        "controls": [
+          "progress",
+          "cancel"
+        ],
+        "progress": "determinate"
+      }
     }
   ]
 }
