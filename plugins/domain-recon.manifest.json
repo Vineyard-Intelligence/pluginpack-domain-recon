@@ -2,11 +2,11 @@
   "identifier": "run.vineyard.pluginpacks.domain_recon",
   "content_type": "vineyard:pluginpack",
   "name": "Domain Recon",
-  "version": "2.1.0",
-  "description": "Passive, keyless domain enrichment: per-record DNS lookups over DoH (A, AAAA, CNAME, MX, NS, TXT, CAA), RDAP registration data, and Certificate Transparency subdomain discovery from crt.sh (web) and crt.name (desktop-only).",
+  "version": "2.1.1",
+  "description": "Passive, keyless domain enrichment: per-record DNS lookups over DoH (A, AAAA, CNAME, MX, NS, TXT, CAA), RDAP registration data, and Certificate Transparency subdomain discovery from crt.sh (web) and crt.name (desktop-only). No API keys, no server.",
   "author": {
     "name": "VINEYARD",
-    "url": "https://github.com/Vineyard-Intelligence"
+    "url": "https://vineyard.run"
   },
   "license": "Apache-2.0",
   "icon": "globe",
@@ -23,7 +23,7 @@
       "content_type": "vineyard:plugin",
       "name": "DNS Lookup (A Record)",
       "version": "1.0.0",
-      "description": "Resolves each selected Domain's A records over DNS-over-HTTPS and adds them to the graph. Keyless, no server.",
+      "description": "Resolves each selected Domain's A records over DNS-over-HTTPS and links the IPv4 addresses it finds as IP Address nodes. Keyless, no server.",
       "icon": "network",
       "platforms": {
         "primary": "web",
@@ -85,7 +85,7 @@
       "content_type": "vineyard:plugin",
       "name": "DNS Lookup (AAAA Record)",
       "version": "1.0.0",
-      "description": "Resolves each selected Domain's AAAA records over DNS-over-HTTPS and adds them to the graph. Keyless, no server.",
+      "description": "Resolves each selected Domain's AAAA records over DNS-over-HTTPS and links the IPv6 addresses it finds as IP Address nodes. Keyless, no server.",
       "icon": "waypoints",
       "platforms": {
         "primary": "web",
@@ -147,7 +147,7 @@
       "content_type": "vineyard:plugin",
       "name": "DNS Lookup (CNAME Record)",
       "version": "1.0.0",
-      "description": "Resolves each selected Domain's CNAME records over DNS-over-HTTPS and adds them to the graph. Keyless, no server.",
+      "description": "Resolves each selected Domain's CNAME records over DNS-over-HTTPS and adds them as DNS Record nodes. Reveals aliasing and hosting providers. Keyless, no server.",
       "icon": "link",
       "platforms": {
         "primary": "web",
@@ -209,7 +209,7 @@
       "content_type": "vineyard:plugin",
       "name": "DNS Lookup (MX Record)",
       "version": "1.0.0",
-      "description": "Resolves each selected Domain's MX records over DNS-over-HTTPS and adds them to the graph. Keyless, no server.",
+      "description": "Resolves each selected Domain's MX records over DNS-over-HTTPS and adds them as DNS Record nodes. Mail routing often identifies the provider or tenant. Keyless, no server.",
       "icon": "server",
       "platforms": {
         "primary": "web",
@@ -271,7 +271,7 @@
       "content_type": "vineyard:plugin",
       "name": "DNS Lookup (NS Record)",
       "version": "1.0.0",
-      "description": "Resolves each selected Domain's NS records over DNS-over-HTTPS and adds them to the graph. Keyless, no server.",
+      "description": "Resolves each selected Domain's NS records over DNS-over-HTTPS and adds them as DNS Record nodes. Nameservers are a strong shared-infrastructure pivot. Keyless, no server.",
       "icon": "server",
       "platforms": {
         "primary": "web",
@@ -333,7 +333,7 @@
       "content_type": "vineyard:plugin",
       "name": "DNS Lookup (TXT Record)",
       "version": "1.0.0",
-      "description": "Resolves each selected Domain's TXT records over DNS-over-HTTPS and adds them to the graph. Keyless, no server.",
+      "description": "Resolves each selected Domain's TXT records over DNS-over-HTTPS and adds them as DNS Record nodes. SPF/DKIM/verification strings often leak vendors in use. Keyless, no server.",
       "icon": "globe",
       "platforms": {
         "primary": "web",
@@ -395,7 +395,7 @@
       "content_type": "vineyard:plugin",
       "name": "DNS Lookup (CAA Record)",
       "version": "1.0.0",
-      "description": "Resolves each selected Domain's CAA records over DNS-over-HTTPS and adds them to the graph. Keyless, no server.",
+      "description": "Resolves each selected Domain's CAA records over DNS-over-HTTPS and adds them as DNS Record nodes. Names the CAs allowed to issue for the domain. Keyless, no server.",
       "icon": "shield-alert",
       "platforms": {
         "primary": "web",
@@ -487,7 +487,7 @@
             "methods": [
               "GET"
             ],
-            "purpose": "RDAP bootstrap \u2192 authoritative registry (both send CORS *)."
+            "purpose": "RDAP bootstrap → authoritative registry (both send CORS *)."
           }
         ]
       },
@@ -505,7 +505,7 @@
       "content_type": "vineyard:plugin",
       "name": "Certificate Transparency Subdomains",
       "version": "1.0.0",
-      "description": "Discovers subdomains of each selected Domain from public Certificate Transparency logs (crt.sh) and adds them as Domain nodes. Passive, keyless, no server. Capped at 150 per domain.",
+      "description": "Discovers subdomains of each selected Domain from public Certificate Transparency logs (crt.sh) and adds them as Domain nodes (\"subdomain\"). Passive, keyless, no server. Capped at 150 per domain.",
       "icon": "badge-check",
       "platforms": {
         "primary": "web",
@@ -560,7 +560,7 @@
       "content_type": "vineyard:plugin",
       "name": "Certificate Transparency Subdomains (crt.name)",
       "version": "1.0.0",
-      "description": "Discovers subdomains of each selected Domain from crt.name's Certificate Transparency search API and adds them as Domain nodes (\"subdomain\"). Desktop only — crt.name sends no CORS headers, so a browser cannot read the response; the Vineyard desktop app's anonymous cross-origin probe is used instead. Passive, keyless. crt.name enforces a 1000-request/day quota per source IP; capped at 500 new subdomains per domain to keep the graph reviewable.",
+      "description": "Discovers subdomains of each selected Domain from crt.name's Certificate Transparency search API and adds them as Domain nodes (\"subdomain\"). Desktop only — crt.name sends no CORS headers, so a browser cannot read the response; the Vineyard desktop app's anonymous cross-origin probe is used instead. Passive, keyless. crt.name enforces a 1000-request/day quota per source IP.",
       "icon": "radar",
       "platforms": {
         "primary": "desktop",
