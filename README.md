@@ -1,10 +1,9 @@
 # Domain Recon
 
-A Vineyard **plugin pack** for passive, keyless enrichment of **Domain** nodes. Everything runs
-in the browser sandbox — no server, no API key, no data leaves the client beyond the public lookups
-each plugin makes. Every endpoint used is CORS-enabled and free.
-
-Three plugins:
+A Vineyard **plugin pack** for passive, keyless enrichment of **Domain** nodes. Nine of its ten
+plugins run entirely in the browser sandbox — no server, no API key, no data leaves the client
+beyond the public lookups each plugin makes, and every endpoint used is CORS-enabled and free. The
+tenth (crt.name) needs the desktop app; see below.
 
 - **DNS Lookup** — resolves a domain over **DNS-over-HTTPS** (Cloudflare, falling back to Google) and
   maps its records: `A`/`AAAA` become **IP Address** nodes (`resolves to`), while `MX`/`NS`/`TXT`/`CAA`
@@ -14,6 +13,9 @@ Three plugins:
 - **Certificate Transparency Subdomains** — discovers subdomains from public **Certificate
   Transparency** logs (`crt.sh`) and adds them as **Domain** nodes (`subdomain`). Capped at 150 per
   domain to keep the graph reviewable.
+- **Certificate Transparency Subdomains (crt.name)** — a second CT source (`crt.name`'s search API),
+  desktop-only. Capped at 500 new subdomains per domain; crt.name enforces its own 1000-request/day
+  quota per source IP.
 
 ## How it works
 
@@ -23,10 +25,16 @@ Three plugins:
 - **RDAP** publishes registration data as JSON with permissive CORS. `rdap.org` 302-redirects to the
   authoritative registry (Verisign/registry operators); the browser follows it and the final response
   also sends CORS, so the whole lookup works client-side.
-- **Certificate Transparency** logs are queried through `crt.sh`'s JSON output. Subject Alternative
-  Names are flattened, wildcards stripped, and only true subdomains of the queried domain are kept.
+- **Certificate Transparency (crt.sh)** logs are queried through `crt.sh`'s JSON output. Subject
+  Alternative Names are flattened, wildcards stripped, and only true subdomains of the queried domain
+  are kept.
+- **Certificate Transparency (crt.name)** works the same way conceptually, but `crt.name` sends no
+  `access-control-allow-origin` header at all (verified: even an OPTIONS preflight 405s with no ACAO),
+  so a browser cannot read its response. This plugin instead goes through the Vineyard desktop app's
+  anonymous cross-origin probe (`ctx.net.probe`) — the same mechanism the WhatsMyName pack uses — and
+  is unavailable in a plain browser tab. The response is plain text, one hostname per line, not JSON.
 
-All three enrich **existing** Domain nodes and never overwrite known fields with blanks (Vineyard's
+All ten enrich **existing** Domain nodes and never overwrite known fields with blanks (Vineyard's
 create-time de-dup merges observations).
 
 ## Layout
