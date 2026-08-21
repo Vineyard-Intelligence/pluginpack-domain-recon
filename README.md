@@ -14,8 +14,8 @@ tenth (crt.name) needs the desktop app; see below.
   Transparency** logs (`crt.sh`) and adds them as **Domain** nodes (`subdomain`). Capped at 150 per
   domain to keep the graph reviewable.
 - **Certificate Transparency Subdomains (crt.name)** — a second CT source (`crt.name`'s search API),
-  desktop-only. Capped at 500 new subdomains per domain; crt.name enforces its own 1000-request/day
-  quota per source IP.
+  desktop-only. Every subdomain the API returns is added — no per-domain cap; crt.name enforces its
+  own 1000-request/day quota per source IP.
 
 ## How it works
 
@@ -39,8 +39,19 @@ create-time de-dup merges observations).
 
 ## Layout
 
-- `plugins/domain-recon.manifest.json` — the pack manifest (catalog entry source).
-- `dist/` — runnable bundle (see note; not built yet — plugins run as built-ins in-app today).
+Self-contained — no dependency on the Vineyard frontend repo. Everything needed to rebuild this pack
+lives here:
+
+- `src/main.ts` — the pack source (all ten plugins) plus `src/sdk.ts`, a local copy of the plugin SDK
+  types.
+- `build.mjs` — bundles `src/main.ts` into `dist/pack.mjs` with esbuild (`node build.mjs`).
+- `gen-manifest.mjs` — regenerates `plugins/domain-recon.manifest.json` from the built bundle, so the
+  two copies cannot drift (`node gen-manifest.mjs`, after a build).
+- `plugins/domain-recon.manifest.json` — the pack manifest (catalog entry source; generated, do not
+  hand-edit).
+- `dist/pack.mjs` — the runnable bundle the registry serves.
+
+To ship a change: edit `src/main.ts`, then `node build.mjs && node gen-manifest.mjs`.
 
 Data sources: public DNS resolvers, the RDAP bootstrap (`rdap.org`), and Certificate Transparency via
-`crt.sh`. No credentials, no cost.
+`crt.sh` and `crt.name`. No credentials, no cost.
