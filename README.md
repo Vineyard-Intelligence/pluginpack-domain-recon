@@ -19,23 +19,18 @@ tenth (crt.name) needs the desktop app; see below.
 
 ## How it works
 
-- **DNS-over-HTTPS** turns a DNS query into a CORS-enabled HTTPS `GET` — both `cloudflare-dns.com` and
-  `dns.google` answer with `access-control-allow-origin: *`, so no proxy is needed. Answers are
-  filtered by record type; `A`/`AAAA` are promoted to first-class IP nodes for pivoting.
-- **RDAP** publishes registration data as JSON with permissive CORS. `rdap.org` 302-redirects to the
-  authoritative registry (Verisign/registry operators); the browser follows it and the final response
-  also sends CORS, so the whole lookup works client-side.
+- **DNS-over-HTTPS** answers from `cloudflare-dns.com` / `dns.google` are filtered by record type;
+  `A`/`AAAA` are promoted to first-class IP nodes for pivoting.
+- **RDAP** lookups go to `rdap.org`, which redirects to the authoritative registry
+  (Verisign/registry operators).
 - **Certificate Transparency (crt.sh)** logs are queried through `crt.sh`'s JSON output. Subject
   Alternative Names are flattened, wildcards stripped, and only true subdomains of the queried domain
   are kept.
 - **Certificate Transparency (crt.name)** works the same way conceptually, but `crt.name` sends no
-  `access-control-allow-origin` header at all (verified: even an OPTIONS preflight 405s with no ACAO),
-  so a browser cannot read its response. This plugin instead goes through the Vineyard desktop app's
-  anonymous cross-origin probe (`ctx.net.probe`) — the same mechanism the WhatsMyName pack uses — and
-  is unavailable in a plain browser tab. The response is plain text, one hostname per line, not JSON.
+  CORS headers, so a browser cannot read its response; this plugin runs only in the Vineyard desktop
+  app. The response is plain text, one hostname per line, not JSON.
 
-All ten enrich **existing** Domain nodes and never overwrite known fields with blanks (Vineyard's
-create-time de-dup merges observations).
+All ten enrich **existing** Domain nodes and never overwrite known fields with blanks.
 
 ## Layout
 
