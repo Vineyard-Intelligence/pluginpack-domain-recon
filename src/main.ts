@@ -143,10 +143,10 @@ function addressPlugin(type: 'A' | 'AAAA', version: 'ipv4' | 'ipv6', icon: strin
             identifier: `run.vineyard.plugins.dns_lookup_${type.toLowerCase()}`,
             content_type: 'vineyard:plugin',
             name: `DNS Lookup (${type} Record)`,
-            version: '1.0.0',
-            description: `Resolves each selected Domain's ${type} records over DNS-over-HTTPS and links the ${
+            version: '1.0.1',
+            description: `Resolves the ${type} records of each selected Domain and adds the ${
                 version === 'ipv4' ? 'IPv4' : 'IPv6'
-            } addresses it finds as IP Address nodes. Keyless, no server.`,
+            } addresses as IP Address nodes linked by "resolves to".`,
             icon,
             platforms: WEB_PLATFORMS,
             io: {
@@ -183,14 +183,14 @@ function addressPlugin(type: 'A' | 'AAAA', version: 'ipv4' | 'ipv6', icon: strin
 }
 
 /** CNAME / MX / NS / TXT / CAA → DNS Record nodes. */
-function recordPlugin(type: 'CNAME' | 'MX' | 'NS' | 'TXT' | 'CAA', icon: string, blurb: string) {
+function recordPlugin(type: 'CNAME' | 'MX' | 'NS' | 'TXT' | 'CAA', icon: string) {
     return definePlugin({
         manifest: {
             identifier: `run.vineyard.plugins.dns_lookup_${type.toLowerCase()}`,
             content_type: 'vineyard:plugin',
             name: `DNS Lookup (${type} Record)`,
-            version: '1.0.0',
-            description: `Resolves each selected Domain's ${type} records over DNS-over-HTTPS and adds them as DNS Record nodes. ${blurb} Keyless, no server.`,
+            version: '1.0.1',
+            description: `Resolves the ${type} records of each selected Domain and adds each as a DNS Record node linked by "has record".`,
             icon,
             platforms: WEB_PLATFORMS,
             io: {
@@ -245,11 +245,11 @@ function recordPlugin(type: 'CNAME' | 'MX' | 'NS' | 'TXT' | 'CAA', icon: string,
 
 const dnsLookupA = addressPlugin('A', 'ipv4', 'network');
 const dnsLookupAAAA = addressPlugin('AAAA', 'ipv6', 'waypoints');
-const dnsLookupCNAME = recordPlugin('CNAME', 'link', 'Reveals aliasing and hosting providers.');
-const dnsLookupMX = recordPlugin('MX', 'server', 'Mail routing often identifies the provider or tenant.');
-const dnsLookupNS = recordPlugin('NS', 'server', 'Nameservers are a strong shared-infrastructure pivot.');
-const dnsLookupTXT = recordPlugin('TXT', 'globe', 'SPF/DKIM/verification strings often leak vendors in use.');
-const dnsLookupCAA = recordPlugin('CAA', 'shield-alert', 'Names the CAs allowed to issue for the domain.');
+const dnsLookupCNAME = recordPlugin('CNAME', 'link');
+const dnsLookupMX = recordPlugin('MX', 'server');
+const dnsLookupNS = recordPlugin('NS', 'server');
+const dnsLookupTXT = recordPlugin('TXT', 'globe');
+const dnsLookupCAA = recordPlugin('CAA', 'shield-alert');
 
 // =====================================================================================
 // Plugin 2 — RDAP Domain (registration data; the modern, CORS-friendly WHOIS replacement)
@@ -274,9 +274,9 @@ const rdapDomain = definePlugin({
         identifier: 'run.vineyard.plugins.rdap_domain',
         content_type: 'vineyard:plugin',
         name: 'RDAP Domain',
-        version: '1.0.0',
+        version: '1.0.1',
         description:
-            "Fills each selected Domain's registrar, creation/expiry dates, status and nameservers from RDAP (the structured WHOIS successor), via rdap.org bootstrap. Keyless, CORS-native, no server.",
+            "Fills each selected Domain's registrar, creation and expiration dates, status and nameservers from RDAP.",
         icon: 'scroll-text',
         platforms: WEB_PLATFORMS,
         io: {
@@ -359,8 +359,8 @@ const crtshSubdomains = definePlugin({
         identifier: 'run.vineyard.plugins.crtsh_subdomains',
         content_type: 'vineyard:plugin',
         name: 'Certificate Transparency Subdomains',
-        version: '1.0.0',
-        description: `Discovers subdomains of each selected Domain from public Certificate Transparency logs (crt.sh) and adds them as Domain nodes ("subdomain"). Passive, keyless, no server. Capped at ${MAX_SUBS} per domain.`,
+        version: '1.0.1',
+        description: `Finds subdomains of each selected Domain in Certificate Transparency logs (crt.sh) and adds them as Domain nodes linked by "subdomain". Up to ${MAX_SUBS} per domain.`,
         icon: 'badge-check',
         platforms: WEB_PLATFORMS,
         io: {
@@ -461,9 +461,9 @@ const crtnameSubdomains = definePlugin({
         identifier: 'run.vineyard.plugins.crtname_subdomains',
         content_type: 'vineyard:plugin',
         name: 'Certificate Transparency Subdomains (crt.name)',
-        version: '1.0.0',
+        version: '1.0.1',
         description:
-            "Discovers subdomains of each selected Domain from crt.name's Certificate Transparency search API and adds them as Domain nodes (\"subdomain\"). Desktop only — crt.name sends no CORS headers, so a browser cannot read the response; the Vineyard desktop app's anonymous cross-origin probe is used instead. Passive, keyless. crt.name enforces a 1000-request/day quota per source IP.",
+            'Finds subdomains of each selected Domain in Certificate Transparency logs (crt.name) and adds them as Domain nodes linked by "subdomain". crt.name allows 1,000 requests a day per IP address. Desktop only.',
         icon: 'radar',
         platforms: DESKTOP_PLATFORMS,
         io: {
@@ -561,9 +561,9 @@ const pack: VineyardPluginPack & {
     identifier: 'run.vineyard.pluginpacks.domain_recon',
     content_type: 'vineyard:pluginpack',
     name: 'Domain Recon',
-    version: '2.1.1',
+    version: '2.1.2',
     description:
-        'Passive, keyless domain enrichment: per-record DNS lookups over DoH (A, AAAA, CNAME, MX, NS, TXT, CAA), RDAP registration data, and Certificate Transparency subdomain discovery from crt.sh (web) and crt.name (desktop-only). No API keys, no server.',
+        'Enriches Domain nodes with DNS records (A, AAAA, CNAME, MX, NS, TXT, CAA), RDAP registration data, and Certificate Transparency subdomains from crt.sh and crt.name (desktop only).',
     author: { name: 'VINEYARD', url: 'https://vineyard.run' },
     license: 'Apache-2.0',
     icon: 'globe',
