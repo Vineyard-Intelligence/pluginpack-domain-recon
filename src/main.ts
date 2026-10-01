@@ -101,9 +101,13 @@ const DNS_SCOPES = {
         {
             endpoint: 'https://cloudflare-dns.com/dns-query',
             methods: ['GET'],
-            purpose: 'Resolve DNS records over DoH.',
+            purpose: "Look up the selected domains' DNS records.",
         },
-        { endpoint: 'https://dns.google/resolve', methods: ['GET'], purpose: 'Fallback DoH resolver.' },
+        {
+            endpoint: 'https://dns.google/resolve',
+            methods: ['GET'],
+            purpose: "Look up the selected domains' DNS records when Cloudflare's resolver fails.",
+        },
     ],
 } as const;
 
@@ -143,7 +147,7 @@ function addressPlugin(type: 'A' | 'AAAA', version: 'ipv4' | 'ipv6', icon: strin
             identifier: `run.vineyard.plugins.dns_lookup_${type.toLowerCase()}`,
             content_type: 'vineyard:plugin',
             name: `DNS Lookup (${type} Record)`,
-            version: '1.0.1',
+            version: '1.0.2',
             description: `Resolves the ${type} records of each selected Domain and adds the ${
                 version === 'ipv4' ? 'IPv4' : 'IPv6'
             } addresses as IP Address nodes linked by "resolves to".`,
@@ -189,7 +193,7 @@ function recordPlugin(type: 'CNAME' | 'MX' | 'NS' | 'TXT' | 'CAA', icon: string)
             identifier: `run.vineyard.plugins.dns_lookup_${type.toLowerCase()}`,
             content_type: 'vineyard:plugin',
             name: `DNS Lookup (${type} Record)`,
-            version: '1.0.1',
+            version: '1.0.2',
             description: `Resolves the ${type} records of each selected Domain and adds each as a DNS Record node linked by "has record".`,
             icon,
             platforms: WEB_PLATFORMS,
@@ -274,7 +278,7 @@ const rdapDomain = definePlugin({
         identifier: 'run.vineyard.plugins.rdap_domain',
         content_type: 'vineyard:plugin',
         name: 'RDAP Domain',
-        version: '1.0.1',
+        version: '1.0.2',
         description:
             "Fills each selected Domain's registrar, creation and expiration dates, status and nameservers from RDAP.",
         icon: 'scroll-text',
@@ -291,7 +295,8 @@ const rdapDomain = definePlugin({
                 {
                     endpoint: 'https://rdap.org/',
                     methods: ['GET'],
-                    purpose: 'RDAP bootstrap → authoritative registry (both send CORS *).',
+                    purpose:
+                        "Look up the selected domains' RDAP registration records, following the redirect to each domain's registry.",
                 },
             ],
         },
@@ -461,7 +466,7 @@ const crtnameSubdomains = definePlugin({
         identifier: 'run.vineyard.plugins.crtname_subdomains',
         content_type: 'vineyard:plugin',
         name: 'Certificate Transparency Subdomains (crt.name)',
-        version: '1.0.1',
+        version: '1.0.2',
         description:
             'Finds subdomains of each selected Domain in Certificate Transparency logs (crt.name) and adds them as Domain nodes linked by "subdomain". crt.name allows 1,000 requests a day per IP address. Desktop only.',
         icon: 'radar',
@@ -478,7 +483,7 @@ const crtnameSubdomains = definePlugin({
             graph: ['node:read', 'node:create', 'edge:create'],
             web_probe: {
                 purpose:
-                    "Query crt.name's Certificate Transparency search API for each domain's observed subdomains. Desktop only; anonymous, no cookies, no redirects followed.",
+                    "Search crt.name's Certificate Transparency data for the selected domains' subdomains.",
             },
         },
         lifecycle: { persistence: 'opt-in', controls: ['progress', 'cancel'], progress: 'determinate' },
@@ -561,7 +566,7 @@ const pack: VineyardPluginPack & {
     identifier: 'run.vineyard.pluginpacks.domain_recon',
     content_type: 'vineyard:pluginpack',
     name: 'Domain Recon',
-    version: '2.1.2',
+    version: '2.1.3',
     description:
         'Enriches Domain nodes with DNS records (A, AAAA, CNAME, MX, NS, TXT, CAA), RDAP registration data, and Certificate Transparency subdomains from crt.sh and crt.name (desktop only).',
     author: { name: 'VINEYARD', url: 'https://vineyard.run' },
