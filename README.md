@@ -5,17 +5,15 @@ plugins run entirely in the browser sandbox — no server, no API key, no data l
 beyond the public lookups each plugin makes, and every endpoint used is CORS-enabled and free. The
 tenth (crt.name) needs the desktop app; see below.
 
-- **DNS Lookup** — resolves a domain over **DNS-over-HTTPS** (Cloudflare, falling back to Google) and
-  maps its records: `A`/`AAAA` become **IP Address** nodes (`resolves to`), while `MX`/`NS`/`TXT`/`CAA`
-  become **DNS Record** nodes (`has record`).
-- **RDAP Domain** — fills the domain's registrar, creation/expiry dates, status and nameservers from
-  **RDAP** (the structured successor to WHOIS), via the `rdap.org` bootstrap. Keyless and CORS-native.
-- **Certificate Transparency Subdomains** — discovers subdomains from public **Certificate
-  Transparency** logs (`crt.sh`) and adds them as **Domain** nodes (`subdomain`). Capped at 150 per
-  domain to keep the graph reviewable.
-- **Certificate Transparency Subdomains (crt.name)** — a second CT source (`crt.name`'s search API),
-  desktop-only. Every subdomain the API returns is added — no per-domain cap; crt.name enforces its
-  own 1000-request/day quota per source IP.
+- **DNS Lookup (A / AAAA / CNAME / MX / NS / TXT / CAA Record)** — seven plugins, one per record
+  type. `A`/`AAAA` add **IP Address** nodes (`resolves to`); the others add **DNS Record** nodes
+  (`has record`).
+- **RDAP Domain** — fills the domain's registrar, creation and expiration dates, status and
+  nameservers from **RDAP**.
+- **Certificate Transparency Subdomains** — finds subdomains in Certificate Transparency logs
+  (`crt.sh`) and adds them as **Domain** nodes (`subdomain`). Up to 150 per domain.
+- **Certificate Transparency Subdomains (crt.name)** — the same from `crt.name`. crt.name allows
+  1,000 requests a day per IP address. Desktop only.
 
 ## How it works
 
