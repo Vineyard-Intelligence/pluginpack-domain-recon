@@ -20,10 +20,8 @@ import type { HostContext, RunResult, GraphNode, VineyardPluginPack, PluginManif
 
 const DOH_ENDPOINTS = ['https://cloudflare-dns.com/dns-query', 'https://dns.google/resolve'];
 
-// Shared platform blocks, referenced by every plugin below (never a fresh 'inline' entry per
-// plugin): the catalog manifest gen-manifest.mjs writes IS what a project installs from, and a
-// member whose entry names 'inline' installs without error and then never appears in the plugin
-// list — there is no bundling context here for 'inline' to mean anything within.
+// Shared platform blocks, referenced by every plugin below: the catalog manifest gen-manifest.mjs
+// writes IS what a project installs from, and every member's entry has to name this bundle.
 const WEB_PLATFORMS: PluginManifest['platforms'] = {
     primary: 'web',
     web: { runtime: 'sandbox-js', entry: 'dist/pack.mjs' },
@@ -31,12 +29,12 @@ const WEB_PLATFORMS: PluginManifest['platforms'] = {
 const DESKTOP_PLATFORMS: PluginManifest['platforms'] = {
     primary: 'desktop',
     web: { runtime: 'sandbox-js', entry: 'dist/pack.mjs' },
-    desktop: { runtime: 'sandbox-js', entry: 'dist/pack.mjs', min_app_version: '0.1.0' },
+    desktop: { runtime: 'sandbox-js', entry: 'dist/pack.mjs' },
 };
 
 const isDomain = (n: GraphNode) => n.type === 'infrastructure.domain';
 const domainOf = (n: GraphNode) =>
-    String((n.data as any).domain_name ?? (n.data as any).value ?? '')
+    String((n.data as any).domain_name ?? '')
         .trim()
         .toLowerCase();
 

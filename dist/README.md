@@ -1,6 +1,11 @@
 # dist/
 
-The runnable bundle (`cdn-detect-pack.js`) is not built yet. The plugins currently ship as
-**built-in** reference plugins inside the Vineyard app (manifest members use `entry: "inline"`).
-This catalog manifest exists so the pack is listable/installable in the marketplace; remote
-execution from this repo lands when the bundle is built and committed here.
+The runnable bundle (`pack.mjs`), built from `src/main.ts` and the plugin SDK it imports
+(`src/sdk.ts`) by `build.mjs` (esbuild). The SDK is inlined on purpose — the module is fetched by
+URL and runs in a worker with no import map.
+
+Regenerate after editing source, then refresh the catalog manifest from the bundle:
+
+```bash
+node build.mjs && node gen-manifest.mjs
+```
