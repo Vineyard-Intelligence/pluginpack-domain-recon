@@ -16,7 +16,7 @@
 // per-RIR endpoint list is needed. crt.name is the exception: it sends no CORS headers at all, so
 // its plugin instead uses `ctx.net.probe` (desktop-only) — see the plugin's own comment for why.
 import { definePlugin, definePluginPack } from './sdk';
-import type { HostContext, RunResult, GraphNode, VineyardPluginPack, PluginManifest } from './sdk';
+import type { HostContext, RunResult, GraphNode, VineyardPluginPack, PluginManifest, SafeResponse } from './sdk';
 
 const DOH_ENDPOINTS = ['https://cloudflare-dns.com/dns-query', 'https://dns.google/resolve'];
 
@@ -256,6 +256,42 @@ const dnsLookupCAA = recordPlugin('CAA', 'shield-alert');
 // =====================================================================================
 // Plugin 2 — RDAP Domain (registration data; the modern, CORS-friendly WHOIS replacement)
 // =====================================================================================
+
+/** Refusals already logged in this run, so a budget refusal over 100 domains is one line, not 100. */
+const keepNoted = new WeakMap<HostContext, Set<string>>();
+
+/**
+ * Keep a call's raw answer on the node it describes (plugin raw results, spec §5). Every call site
+ * goes through here, for these reasons:
+ *   - desktop builds before ctx.retain have none, and a bare call there is a TypeError that would
+ *     fail a run that otherwise works, so the check is `typeof`, not truthiness;
+ *   - status 0 is never a response: it is a request that did not happen (a network error, a host
+ *     refusal), and says nothing about the domain;
+ *   - only status, response headers and body are handed over, built afresh: nothing about the
+ *     request (the URL) can ride along on a response object the host would have to trust;
+ *   - a refusal (over budget) or a throw costs the raw copy, never the run: the mapped fields are
+ *     already staged and are what the analyst ran this for.
+ */
+async function keep(ctx: HostContext, nodeId: string, op: string, res: SafeResponse): Promise<void> {
+    if (typeof ctx.retain !== 'function' || !nodeId || !(res?.status > 0)) return;
+    let reason = '';
+    try {
+        // The response's own text, not a re-serialised parse, so the host hashes the bytes the
+        // registry sent.
+        const body = await res.text();
+        const out = await ctx.retain(nodeId, op, { status: res.status, headers: { ...(res.headers ?? {}) }, body });
+        if (out && out.kept === false) reason = typeof out.reason === 'string' && out.reason ? out.reason : 'refused';
+    } catch {
+        reason = 'the host could not keep it';
+    }
+    if (!reason) return;
+    let noted = keepNoted.get(ctx);
+    if (!noted) keepNoted.set(ctx, (noted = new Set()));
+    if (noted.has(`${op}\0${reason}`)) return;
+    noted.add(`${op}\0${reason}`);
+    ctx.progress?.log?.(`Raw ${op} result not kept — ${reason}`);
+}
+
 function vcardField(entity: any, field: string): string {
     // vcardArray = ["vcard", [ ["version",{},"text","4.0"], ["fn",{},"text","Registrar, Inc."], ... ]]
     const arr = entity?.vcardArray?.[1];
@@ -276,7 +312,7 @@ const rdapDomain = definePlugin({
         identifier: 'run.vineyard.plugins.rdap_domain',
         content_type: 'vineyard:plugin',
         name: 'RDAP Domain',
-        version: '1.0.2',
+        version: '1.1.0',
         description:
             "Fills each selected Domain's registrar, creation and expiration dates, status and nameservers from RDAP.",
         icon: 'scroll-text',
@@ -315,16 +351,28 @@ const rdapDomain = definePlugin({
             if (!domain) continue;
             ctx.progress?.set?.({ percent: Math.round(((i + 1) / ids.length) * 100), message: `RDAP ${domain}` });
 
+            // Raw result (op "rdap"): the answer the fields below are mapped from. ctx.net.fetch has
+            // already followed rdap.org's redirect, so this is the registry's own answer; the
+            // redirect itself is rdap.org's bootstrap step and never reaches the plugin. There is no
+            // registrar referral: the fields come from the registry answer alone.
             let doc: any;
+            let res: SafeResponse;
             try {
-                const res = await ctx.net!.fetch!(`https://rdap.org/domain/${encodeURIComponent(domain)}`, {
+                res = await ctx.net!.fetch!(`https://rdap.org/domain/${encodeURIComponent(domain)}`, {
                     method: 'GET',
                 });
-                if (!res.ok) continue; // 404 = not found / not an RDAP-served TLD
+                if (!res.ok) {
+                    // 404 = not found / not an RDAP-served TLD. Kept (analyst's decision, 2026-11-25):
+                    // "the registry had no record of this domain on this date" is itself a finding.
+                    // A 429 or 5xx is about the service, not the domain, and is not kept.
+                    if (res.status === 404) await keep(ctx, ids[i], 'rdap', res);
+                    continue;
+                }
                 doc = await res.json();
             } catch {
                 continue;
             }
+            await keep(ctx, ids[i], 'rdap', res);
 
             const registrar = vcardField(findEntity(doc.entities, 'registrar'), 'fn');
             const created = eventDate(doc.events, 'registration');
@@ -583,7 +631,7 @@ const pack: VineyardPluginPack & {
     identifier: 'run.vineyard.pluginpacks.domain_recon',
     content_type: 'vineyard:pluginpack',
     name: 'Domain Recon',
-    version: '2.2.1',
+    version: '2.3.0',
     summary:
         'Enriches Domain nodes with DNS records (A, AAAA, CNAME, MX, NS, TXT, CAA), RDAP registration data, and Certificate Transparency subdomains from crt.sh and crt.name (desktop only).',
     description: PACK_PAGE,
