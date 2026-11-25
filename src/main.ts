@@ -265,6 +265,11 @@ const keepNoted = new WeakMap<HostContext, Set<string>>();
  * goes through here, for these reasons:
  *   - desktop builds before ctx.retain have none, and a bare call there is a TypeError that would
  *     fail a run that otherwise works, so the check is `typeof`, not truthiness;
+ *   - only a 2xx answer the plugin maps from is kept (analyst's decision, 2026-11-25, reversing the
+ *     earlier one that kept a 404 as a finding): a miss — a 404, a 429 or 5xx, a 2xx that is not
+ *     JSON or is empty — adds nothing to the domain and only fills its raw results with noise.
+ *     Callers decide that; this re-checks 2xx so a non-2xx can never be handed over (the host
+ *     refuses one too, and logs the refusal as "not kept" noise);
  *   - status 0 is never a response: it is a request that did not happen (a network error, a host
  *     refusal), and says nothing about the domain;
  *   - only status, response headers and body are handed over, built afresh: nothing about the
@@ -273,7 +278,7 @@ const keepNoted = new WeakMap<HostContext, Set<string>>();
  *     already staged and are what the analyst ran this for.
  */
 async function keep(ctx: HostContext, nodeId: string, op: string, res: SafeResponse): Promise<void> {
-    if (typeof ctx.retain !== 'function' || !nodeId || !(res?.status > 0)) return;
+    if (typeof ctx.retain !== 'function' || !nodeId || !(res?.status >= 200 && res.status < 300)) return;
     let reason = '';
     try {
         // The response's own text, not a re-serialised parse, so the host hashes the bytes the
@@ -290,6 +295,16 @@ async function keep(ctx: HostContext, nodeId: string, op: string, res: SafeRespo
     if (noted.has(`${op}\0${reason}`)) return;
     noted.add(`${op}\0${reason}`);
     ctx.progress?.log?.(`Raw ${op} result not kept — ${reason}`);
+}
+
+/**
+ * An answer there is anything to map from: a JSON object with at least one key. objectClassName is
+ * deliberately not required — not every RDAP server is RFC-strict, and one that omits it is still
+ * mapped. Anything else (null, an array, `{}`, a bare value) maps no field, so skipping it changes
+ * no write; it only spares a null body the TypeError that used to fail the run.
+ */
+function hasContent(doc: unknown): doc is Record<string, any> {
+    return !!doc && typeof doc === 'object' && !Array.isArray(doc) && Object.keys(doc).length > 0;
 }
 
 function vcardField(entity: any, field: string): string {
@@ -312,7 +327,7 @@ const rdapDomain = definePlugin({
         identifier: 'run.vineyard.plugins.rdap_domain',
         content_type: 'vineyard:plugin',
         name: 'RDAP Domain',
-        version: '1.1.0',
+        version: '1.2.0',
         description:
             "Fills each selected Domain's registrar, creation and expiration dates, status and nameservers from RDAP.",
         icon: 'scroll-text',
@@ -361,17 +376,15 @@ const rdapDomain = definePlugin({
                 res = await ctx.net!.fetch!(`https://rdap.org/domain/${encodeURIComponent(domain)}`, {
                     method: 'GET',
                 });
-                if (!res.ok) {
-                    // 404 = not found / not an RDAP-served TLD. Kept (analyst's decision, 2026-11-25):
-                    // "the registry had no record of this domain on this date" is itself a finding.
-                    // A 429 or 5xx is about the service, not the domain, and is not kept.
-                    if (res.status === 404) await keep(ctx, ids[i], 'rdap', res);
-                    continue;
-                }
+                // 404 = not found / not an RDAP-served TLD; a 429 or 5xx is about the service. None is
+                // kept: a miss adds nothing to the domain (see keep).
+                if (!res.ok) continue;
                 doc = await res.json();
             } catch {
-                continue;
+                continue; // not JSON: nothing to map, nothing kept
             }
+            // A 2xx with nothing in it (null, an array, `{}`) maps nothing, so it is not kept.
+            if (!hasContent(doc)) continue;
             await keep(ctx, ids[i], 'rdap', res);
 
             const registrar = vcardField(findEntity(doc.entities, 'registrar'), 'fn');
@@ -631,7 +644,7 @@ const pack: VineyardPluginPack & {
     identifier: 'run.vineyard.pluginpacks.domain_recon',
     content_type: 'vineyard:pluginpack',
     name: 'Domain Recon',
-    version: '2.3.0',
+    version: '2.4.0',
     summary:
         'Enriches Domain nodes with DNS records (A, AAAA, CNAME, MX, NS, TXT, CAA), RDAP registration data, and Certificate Transparency subdomains from crt.sh and crt.name (desktop only).',
     description: PACK_PAGE,

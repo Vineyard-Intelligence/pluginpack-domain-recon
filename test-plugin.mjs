@@ -133,8 +133,10 @@ const leaks = (calls) => {
 // ---- raw results: ctx.retain ------------------------------------------------------------------
 // Invariants, from the plugin raw results spec (§5, §12):
 //   - RDAP Domain keeps the registry's answer for each domain on that domain's node, op "rdap", as
-//     the text the registry sent. A 404 (no such domain / no RDAP for the TLD) is kept too; a 429,
-//     a 5xx and a request that never landed are not.
+//     the text the registry sent. Only a 2xx the fields are mapped from is kept (analyst's
+//     decision, 2026-11-25): a 404 (no such domain / no RDAP for the TLD), a 429, a 5xx, a request
+//     that never landed, and a 2xx that is not JSON or is empty keep nothing. objectClassName is
+//     not required: an answer from a server that omits it is mapped and kept as before.
 //   - Only status, headers and body are handed over: no URL, nothing about the request.
 //   - No bootstrap answer is ever kept: rdap.org's redirect is followed by the host.
 //   - A refusal object or a throw from retain never fails the run, and is logged once per reason.
@@ -165,7 +167,7 @@ const leaks = (calls) => {
   check("old host: a retain that is not a function is left alone", !(notFnRes instanceof Error) && notFnRes.counts.updated === 1);
 }
 {
-  // 404 kept as evidence; 429, 503 and a network failure kept nowhere.
+  // Only the 200 is kept: a 404, 429, 503 and a network failure keep nothing.
   const spy = retainSpy();
   const t = ctxFor({
     nodes: {
@@ -189,10 +191,48 @@ const leaks = (calls) => {
   });
   t.ctx.retain = spy;
   const res = await rdapPlugin.run(t.ctx);
-  check("retain rdap: a 404 is kept on its own domain, and 200s as usual", spy.calls.map((c) => `${c[0]}:${c[1]}:${c[2].status}`).join() === "a:rdap:404,b:rdap:200");
-  check("retain rdap: the 404 keeps the registry's own error text", spy.calls[0]?.[2].body === JSON.stringify(notFoundBody));
-  check("retain rdap: 429, 503 and a network failure are not kept", !spy.calls.some((c) => ["c", "d", "e"].includes(c[0])));
+  check("retain rdap: a 404 keeps nothing, and the 200 is kept as usual", spy.calls.map((c) => `${c[0]}:${c[1]}:${c[2].status}`).join() === "b:rdap:200");
+  check("retain rdap: 429, 503 and a network failure are not kept", !spy.calls.some((c) => ["a", "c", "d", "e"].includes(c[0])));
+  check("retain rdap: no non-2xx is ever handed over", spy.calls.every((c) => c[2].status >= 200 && c[2].status < 300));
   check("retain rdap: misses still write nothing", res.counts.updated === 1 && t.graph.updates.length === 1 && t.graph.updates[0].id === "b");
+}
+{
+  // A 2xx the plugin maps nothing from keeps nothing: not JSON, an empty body, null, an array, or
+  // an empty object.
+  const answers = {
+    "html.example": "<html>Welcome</html>",
+    "empty.example": "",
+    "null.example": "null",
+    "array.example": "[]",
+    "blank.example": "{}",
+  };
+  const names = Object.keys(answers);
+  const spy = retainSpy();
+  const t = ctxFor({
+    nodes: Object.fromEntries(names.map((n) => [n, domainNode(n, n)])),
+    selection: names,
+    respond: (url) => ({ status: 200, body: answers[url.slice(url.lastIndexOf("/") + 1)], headers: RESPONSE_HEADERS }),
+  });
+  t.ctx.retain = spy;
+  const res = await rdapPlugin.run(t.ctx).catch((e) => e);
+  check("retain rdap: a 2xx with nothing in it is asked for, and the run succeeds", t.net.calls.length === names.length && !(res instanceof Error));
+  check("retain rdap: a 2xx that is not JSON or is empty keeps nothing", spy.calls.length === 0);
+  check("retain rdap: ...and writes nothing", !(res instanceof Error) && res.counts.updated === 0 && t.graph.updates.length === 0);
+  check("retain rdap: ...and logs no refusal", !t.logs.some((l) => /not kept/.test(l)));
+}
+{
+  // A registry that omits objectClassName (not every server is RFC-strict) is mapped and kept as
+  // any other answer.
+  const { objectClassName, ...loose } = domainBody;
+  const looseText = JSON.stringify(loose, null, 1);
+  const spy = retainSpy();
+  const t = ctxFor({ nodes: { a: domainNode("a", "example.com") }, selection: ["a"], respond: () => ({ status: 200, body: looseText }) });
+  t.ctx.retain = spy;
+  const res = await rdapPlugin.run(t.ctx);
+  const strict = ctxFor({ nodes: { a: domainNode("a", "example.com") }, selection: ["a"], respond: () => ({ status: 200, body: domainText }) });
+  await rdapPlugin.run(strict.ctx);
+  check("retain rdap: an answer without objectClassName is mapped as one with it", res.counts.updated === 1 && JSON.stringify(t.graph.updates) === JSON.stringify(strict.graph.updates));
+  check("retain rdap: ...and kept, as the registry sent it", spy.calls.length === 1 && spy.calls[0][0] === "a" && spy.calls[0][2].body === looseText);
 }
 {
   // A host that answers a refused request with status 0 rather than throwing: never kept.
@@ -234,8 +274,8 @@ const leaks = (calls) => {
   check("other plugins: DNS Lookup (A) keeps nothing", t.graph.createdNodes.length === 1 && spy.calls.length === 0);
 }
 {
-  check("pack version is 2.3.0", pack.version === "2.3.0");
-  check("RDAP Domain version is 1.1.0", rdapPlugin.manifest.version === "1.1.0");
+  check("pack version is 2.4.0", pack.version === "2.4.0");
+  check("RDAP Domain version is 1.2.0", rdapPlugin.manifest.version === "1.2.0");
 }
 for (const n of ok) console.log(`  ok   ${n}`);
 for (const n of fail) console.log(`  FAIL ${n}`);

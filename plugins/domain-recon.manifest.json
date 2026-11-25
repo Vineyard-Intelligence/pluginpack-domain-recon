@@ -2,7 +2,7 @@
   "identifier": "run.vineyard.pluginpacks.domain_recon",
   "content_type": "vineyard:pluginpack",
   "name": "Domain Recon",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "summary": "Enriches Domain nodes with DNS records (A, AAAA, CNAME, MX, NS, TXT, CAA), RDAP registration data, and Certificate Transparency subdomains from crt.sh and crt.name (desktop only).",
   "description": "For a first look at a domain already in the graph: where it points, who registered it and when, and which hostnames under it appear in Certificate Transparency logs. Every answer comes from public DNS, registry and certificate records.\n\n**Needs:** nothing. No API key or account, and every service it uses is free.\n\n**Who sees it:** each service under Permissions, plus the registry RDAP server that rdap.org redirects to, sees the domain names looked up and the analyst's IP address. Nothing is sent to the domain's own web or mail servers. A resolver with no cached answer asks the domain's authoritative name servers, as any resolver does; that query comes from the resolver, not from the analyst.\n\n**Read results with care:**\n\n- RDAP Domain writes only the fields the registry returned; a field it did not return keeps whatever value the node already had.\n- A domain crt.sh fails to answer for (under load it sometimes returns an error page) is skipped and not counted in the run summary, so no subdomains from crt.sh is not proof there are none. crt.name is the second source.\n- MX values keep the host and drop the preference number. TXT and CAA values are kept as returned.\n\n**Source:** https://github.com/Vineyard-Intelligence/pluginpack-domain-recon (Apache-2.0)",
   "author": {
@@ -457,7 +457,7 @@
       "identifier": "run.vineyard.plugins.rdap_domain",
       "content_type": "vineyard:plugin",
       "name": "RDAP Domain",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "description": "Fills each selected Domain's registrar, creation and expiration dates, status and nameservers from RDAP.",
       "icon": "scroll-text",
       "platforms": {
